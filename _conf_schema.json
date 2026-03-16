@@ -35,7 +35,8 @@
         "hint": "根据供应商名称将订单分发给特定的审批人。Key 为供应商名称，Value 为审批人的统一 ID（如 QQ:123456 或 GROUP:789012）。",
         "default": {
           "Azure Interior": "QQ:12345678"
-        }
+        },
+        "items": {}
       },
       "default_target": {
         "description": "默认审批会话 ID",
