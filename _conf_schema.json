@@ -32,16 +32,16 @@
       "vendor_mapping": {
         "description": "供应商归属映射",
         "type": "object",
-        "hint": "根据供应商名称将订单分发给特定的审批人。Key 为供应商名称，Value 为审批人的统一 ID（如 QQ:123456 或 GROUP:789012）。",
+        "hint": "根据供应商名称将订单分发给特定的审批人。推荐使用三段式统一 ID（如 aiocqhttp:FriendMessage:123456 / aiocqhttp:GroupMessage:789012）；也兼容旧格式 QQ:123456 / GROUP:789012。",
         "default": {
-          "Azure Interior": "QQ:12345678"
+          "Azure Interior": "aiocqhttp:FriendMessage:12345678"
         },
         "items": {}
       },
       "default_target": {
         "description": "默认审批会话 ID",
         "type": "string",
-        "hint": "当供应商未在映射表中找到时，订单将发送至此 ID 进行审批。格式：QQ:123456 或 GROUP:789012",
+        "hint": "当供应商未在映射表中找到时，订单将发送至此 ID 进行审批。推荐：aiocqhttp:FriendMessage:123456 / aiocqhttp:GroupMessage:789012（兼容 QQ/GROUP 旧格式）",
         "default": ""
       },
       "admin_id": {
