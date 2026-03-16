@@ -1,0 +1,97 @@
+{
+  "webhook_settings": {
+    "description": "Webhook 接收配置",
+    "type": "object",
+    "hint": "配置插件监听的端口和路径，用于接收外部订单系统的 POST 请求。",
+    "items": {
+      "port": {
+        "description": "监听端口",
+        "type": "int",
+        "default": 8080,
+        "hint": "Webhook 服务监听的本地端口。"
+      },
+      "path": {
+        "description": "监听路径",
+        "type": "string",
+        "default": "/webhook/order",
+        "hint": "Webhook 接收数据的 URL 路径，例如 /webhook/order"
+      },
+      "security_token": {
+        "description": "安全校验 Token",
+        "type": "string",
+        "default": "",
+        "hint": "可选。如果在外部系统设置了 Token 校验（如 Header 中的 X-Token），请在此填写。留空则不校验。",
+        "obvious_hint": true
+      }
+    }
+  },
+  "approval_logic": {
+    "description": "审批与通知配置",
+    "type": "object",
+    "items": {
+      "vendor_mapping": {
+        "description": "供应商归属映射",
+        "type": "object",
+        "hint": "根据供应商名称将订单分发给特定的审批人。Key 为供应商名称，Value 为审批人的统一 ID（如 QQ:123456 或 GROUP:789012）。",
+        "default": {
+          "Azure Interior": "QQ:12345678"
+        }
+      },
+      "default_target": {
+        "description": "默认审批会话 ID",
+        "type": "string",
+        "hint": "当供应商未在映射表中找到时，订单将发送至此 ID 进行审批。格式：QQ:123456 或 GROUP:789012",
+        "default": ""
+      },
+      "admin_id": {
+        "description": "管理员 ID",
+        "type": "string",
+        "hint": "审批结果（同意/不同意）将同步发送至此管理员账号。",
+        "default": ""
+      },
+      "timeout": {
+        "description": "审批超时时间 (秒)",
+        "type": "int",
+        "default": 3600,
+        "hint": "订单发送后等待审批的时长，默认 1 小时。超时后会话将自动结束。"
+      }
+    }
+  },
+  "keywords": {
+    "description": "审批指令配置",
+    "type": "object",
+    "items": {
+      "approve_text": {
+        "description": "同意关键字",
+        "type": "string",
+        "default": "同意",
+        "hint": "审批人回复此内容（需引用原消息）即表示通过。"
+      },
+      "reject_text": {
+        "description": "不同意关键字",
+        "type": "string",
+        "default": "不同意",
+        "hint": "审批人回复此内容（需引用原消息）即表示拒绝。"
+      }
+    }
+  },
+  "message_template": {
+    "description": "消息模板自定义",
+    "type": "object",
+    "hint": "自定义发送给审批人和管理员的消息格式。",
+    "items": {
+      "approval_card": {
+        "description": "审批卡片内容",
+        "type": "text",
+        "default": "单号：{name}\n供应商：{vendor}\n总计：{total_amount}\n结算币种：{currency}\n单据详情：{url}\n---\n同意则引用该消息发送“同意”，不同意则引用该消息发送“不同意”",
+        "hint": "支持占位符：{name}, {vendor}, {total_amount}, {currency}, {url}"
+      },
+      "report_template": {
+        "description": "结果汇总模板",
+        "type": "text",
+        "default": "【审批结果：{status}】\n单号：{name}\n详情：{url}",
+        "hint": "发送给管理员的消息。支持占位符：{status}, {name}, {url}"
+      }
+    }
+  }
+}
