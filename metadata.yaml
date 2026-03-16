@@ -1,5 +1,5 @@
 name: astrbot_plugin_order_approval
 author: AstrBot助手
 description: 通过 Webhook 接收订单信息并发送至指定群聊或私聊进行审批（同意/不同意），并将审批结果汇报给管理员。
-version: 1.0.0
+version: 1.0.2
 repo: https://github.com/yourname/astrbot_plugin_order_approval

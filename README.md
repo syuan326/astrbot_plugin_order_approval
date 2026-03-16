@@ -35,3 +35,48 @@ markdown
 
 ### 1. 发送 Webhook 数据
 确保您的外部系统向 AstrBot 监听的 Webhook 地址发送如下结构的 JSON：
+```json
+{
+  "order_id": "SO-2026-001",
+  "name": "办公椅采购单",
+  "vendor": "Azure Interior",
+  "total_amount": 1999.00,
+  "currency": "CNY",
+  "url": "https://example.com/orders/SO-2026-001"
+}
+```
+
+### 2. 会话 ID 配置说明
+
+支持以下几种配置方式：
+
+- 三段式统一会话 ID（推荐）
+  - `aiocqhttp:FriendMessage:12345678`
+  - `aiocqhttp:GroupMessage:987654321`
+- 兼容旧格式
+  - `QQ:12345678`
+  - `GROUP:987654321`
+- 纯数字 QQ 号（会自动按私聊候选尝试）
+  - `12345678`
+
+### 3. 供应商映射配置
+
+如果你希望按你说的方式直接写 `<vendor>:<qq号>`，请使用 `approval_logic.vendor_qq_mapping`（推荐）：
+
+```text
+# 每行一条：供应商:QQ号
+Azure Interior:12345678
+Acme Corp:87654321
+```
+
+插件会自动把它转换成 `QQ:<qq号>` 再发送。
+
+你仍然可以使用 `approval_logic.vendor_mapping_text`（通用格式）来写会话 ID：
+
+```text
+# 每行一条，支持 = 或 :
+Azure Interior=QQ:12345678
+Acme Corp:aiocqhttp:GroupMessage:987654321
+```
+
+优先级：`vendor_qq_mapping` > `vendor_mapping_text` > `vendor_mapping`。

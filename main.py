@@ -6,7 +6,7 @@ from astrbot.api.star import Context, Star, register
 from astrbot.api import logger, AstrBotConfig
 import astrbot.api.message_components as Comp
 
-@register("astrbot_plugin_order_approval", "AstrBot助手", "通过 Webhook 接收订单信息并发送至指定会话进行审批", "1.0.0", "https://github.com/yourname/astrbot_plugin_order_approval")
+@register("astrbot_plugin_order_approval", "AstrBot助手", "通过 Webhook 接收订单信息并发送至指定会话进行审批", "1.0.2", "https://github.com/yourname/astrbot_plugin_order_approval")
 class OrderApprovalPlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -34,9 +34,18 @@ class OrderApprovalPlugin(Star):
         if target.count(":") >= 2:
             return [target]
 
+        # 纯数字时，按 QQ 私聊 ID 自动兼容
+        if target.isdigit():
+            return [
+                f"aiocqhttp:FriendMessage:{target}",
+                f"onebot:FriendMessage:{target}",
+                f"qq:friend:{target}",
+                f"qq:private:{target}",
+            ]
+
         parts = target.split(":", 1)
         if len(parts) != 2:
-            return [target]
+            return []
 
         prefix, sid = parts[0].upper(), parts[1].strip()
         if not sid:
@@ -57,7 +66,52 @@ class OrderApprovalPlugin(Star):
                 f"qq:group:{sid}",
             ]
 
-        return [target]
+        return []
+
+    def _merge_mapping_text(self, mapping: dict, mapping_text: str, source: str):
+        """将多行文本映射合并到 mapping。"""
+        if not isinstance(mapping_text, str):
+            return
+
+        for line in mapping_text.splitlines():
+            row = line.strip()
+            if not row or row.startswith("#"):
+                continue
+
+            if "=" in row:
+                vendor, target = row.split("=", 1)
+            elif ":" in row:
+                vendor, target = row.split(":", 1)
+            else:
+                logger.warning(f"忽略无效 {source} 配置行: {row}")
+                continue
+
+            vendor = vendor.strip()
+            target = target.strip()
+            if vendor and target:
+                mapping[vendor] = target
+
+    def _get_vendor_mapping(self):
+        """读取供应商映射，兼容 object / 文本会话映射 / vendor:qq 映射。"""
+        approval_cfg = self.config.get("approval_logic", {})
+        mapping = dict(approval_cfg.get("vendor_mapping", {}) or {})
+
+        # 通用文本版：供应商=会话ID 或 供应商:会话ID
+        self._merge_mapping_text(
+            mapping,
+            approval_cfg.get("vendor_mapping_text", ""),
+            "vendor_mapping_text",
+        )
+
+        # 专用简化版：供应商:QQ号（自动转为 QQ:<id>）
+        vendor_qq_mapping = approval_cfg.get("vendor_qq_mapping", "")
+        if isinstance(vendor_qq_mapping, str):
+            qq_mapping = {}
+            self._merge_mapping_text(qq_mapping, vendor_qq_mapping, "vendor_qq_mapping")
+            for vendor, qq in qq_mapping.items():
+                mapping[vendor] = f"QQ:{qq}"
+
+        return mapping
 
     async def _send_message_compat(self, raw_target: str, chain: MessageChain) -> str:
         """向目标会话发送消息，兼容旧配置格式，返回实际发送成功的统一会话 ID。"""
@@ -114,7 +168,7 @@ class OrderApprovalPlugin(Star):
 
             # 匹配审批人
             approval_cfg = self.config.get("approval_logic", {})
-            vendor_mapping = approval_cfg.get("vendor_mapping", {})
+            vendor_mapping = self._get_vendor_mapping()
             target_id = vendor_mapping.get(vendor) or approval_cfg.get("default_target")
 
             if not target_id:
@@ -187,7 +241,10 @@ class OrderApprovalPlugin(Star):
                 url=order_info['url']
             )
             report_chain = MessageChain().message(report_msg)
-            await self._send_message_compat(admin_id, report_chain)
+            try:
+                await self._send_message_compat(admin_id, report_chain)
+            except Exception as e:
+                logger.warning(f"转发给 admin {admin_id} 失败：{e}")
 
         # 3. 移除待处理状态
         del self.pending_orders[current_uid]
@@ -200,7 +257,7 @@ class OrderApprovalPlugin(Star):
     async def order_config(self, event: AstrMessageEvent):
         """查看当前的订单通知映射配置"""
         approval_cfg = self.config.get("approval_logic", {})
-        mapping = approval_cfg.get("vendor_mapping", {})
+        mapping = self._get_vendor_mapping()
         default = approval_cfg.get("default_target", "未设置")
         admin = approval_cfg.get("admin_id", "未设置")
         
