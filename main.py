@@ -21,6 +21,60 @@ class OrderApprovalPlugin(Star):
         # 启动 Webhook 服务
         asyncio.create_task(self.start_webhook_server())
 
+    def _build_session_candidates(self, raw_target: str):
+        """将旧格式会话 ID（QQ:123 / GROUP:456）兼容转换为 AstrBot 统一会话 ID。"""
+        if not isinstance(raw_target, str):
+            return []
+
+        target = raw_target.strip()
+        if not target:
+            return []
+
+        # 已是统一会话 ID：adapter:session_type:session_id
+        if target.count(":") >= 2:
+            return [target]
+
+        parts = target.split(":", 1)
+        if len(parts) != 2:
+            return [target]
+
+        prefix, sid = parts[0].upper(), parts[1].strip()
+        if not sid:
+            return [target]
+
+        # 常见 AstrBot/OneBot 适配器会话类型的兼容候选
+        if prefix == "QQ":
+            return [
+                f"aiocqhttp:FriendMessage:{sid}",
+                f"onebot:FriendMessage:{sid}",
+                f"qq:friend:{sid}",
+                f"qq:private:{sid}",
+            ]
+        if prefix == "GROUP":
+            return [
+                f"aiocqhttp:GroupMessage:{sid}",
+                f"onebot:GroupMessage:{sid}",
+                f"qq:group:{sid}",
+            ]
+
+        return [target]
+
+    async def _send_message_compat(self, raw_target: str, chain: MessageChain) -> str:
+        """向目标会话发送消息，兼容旧配置格式，返回实际发送成功的统一会话 ID。"""
+        candidates = self._build_session_candidates(raw_target)
+        last_error = None
+        for session_id in candidates:
+            try:
+                await self.context.send_message(session_id, chain)
+                return session_id
+            except Exception as e:
+                last_error = e
+                logger.warning(f"发送到会话 {session_id} 失败，尝试下一个候选: {e}")
+
+        if last_error:
+            raise last_error
+        raise ValueError("目标会话 ID 为空")
+
     async def start_webhook_server(self):
         """启动 aiohttp Webhook 服务器"""
         webhook_cfg = self.config.get("webhook_settings", {})
@@ -79,10 +133,10 @@ class OrderApprovalPlugin(Star):
 
             # 发送审批请求
             chain = MessageChain().message(card_text)
-            await self.context.send_message(target_id, chain)
+            resolved_target_id = await self._send_message_compat(target_id, chain)
 
             # 记录待审批状态
-            self.pending_orders[target_id] = {
+            self.pending_orders[resolved_target_id] = {
                 "order_id": order_id,
                 "name": name,
                 "vendor": vendor,
@@ -133,7 +187,7 @@ class OrderApprovalPlugin(Star):
                 url=order_info['url']
             )
             report_chain = MessageChain().message(report_msg)
-            await self.context.send_message(admin_id, report_chain)
+            await self._send_message_compat(admin_id, report_chain)
 
         # 3. 移除待处理状态
         del self.pending_orders[current_uid]
