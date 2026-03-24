@@ -61,15 +61,17 @@ markdown
 
 ### 3. 供应商映射配置
 
-`approval_logic.vendor_mapping` 仅支持一种格式：`["user_number:vendor_id"]`。
+`approval_logic.vendor_mapping` 推荐使用以下格式（支持私聊或群聊会话）：
 
 ```json
 [
-  "12345678:Azure Interior",
-  "87654321:Acme Corp"
+  {"Pardofelis:FriendMessage:2331329306": "Azure Interior"},
+  {"Pardofelis:GroupMessage:987654321": "Acme Corp"}
 ]
 ```
 
 其中：
-- `user_number` 为审批人 QQ 号；
-- `vendor_id` 为 webhook 数据里的 `vendor` 字段值。
+- key 为 AstrBot 统一会话 ID（例如 `Pardofelis:FriendMessage:2331329306` 或 `Pardofelis:GroupMessage:987654321`）；
+- value 为 webhook 数据里的 `vendor` 字段值。
+
+> 兼容旧格式：`["12345678:Azure Interior"]`（会自动按 QQ 私聊候选会话尝试发送）。
