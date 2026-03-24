@@ -31,18 +31,9 @@
     "items": {
       "vendor_mapping": {
         "description": "供应商归属映射",
-        "type": "object",
-        "hint": "根据供应商名称将订单分发给特定的审批人。推荐使用三段式统一 ID（如 aiocqhttp:FriendMessage:123456 / aiocqhttp:GroupMessage:789012）；也兼容旧格式 QQ:123456 / GROUP:789012。",
-        "default": {
-          "Azure Interior": "aiocqhttp:FriendMessage:12345678"
-        },
-        "items": {}
-      },
-      "vendor_mapping_text": {
-        "description": "供应商映射（文本版）",
         "type": "text",
-        "default": "",
-        "hint": "当配置面板不方便编辑对象映射时可使用此项。每行一条：供应商=会话ID（也支持 供应商:会话ID）。例如：\nAzure Interior=QQ:12345678\nAcme Corp=aiocqhttp:GroupMessage:987654321"
+        "hint": "仅支持一种格式：JSON 数组，元素为 \"user_number:vendor_id\"。例如：[\"12345678:Azure Interior\", \"87654321:Acme Corp\"]。",
+        "default": "[\"12345678:Azure Interior\"]"
       },
       "default_target": {
         "description": "默认审批会话 ID",
@@ -61,12 +52,6 @@
         "type": "int",
         "default": 3600,
         "hint": "订单发送后等待审批的时长，默认 1 小时。超时后会话将自动结束。"
-      },
-      "vendor_qq_mapping": {
-        "description": "供应商-QQ映射（推荐）",
-        "type": "text",
-        "default": "",
-        "hint": "每行一条，格式固定为 <vendor>:<qq号>。例如：\nAzure Interior:12345678\nAcme Corp:87654321"
       }
     }
   },

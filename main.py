@@ -68,48 +68,36 @@ class OrderApprovalPlugin(Star):
 
         return []
 
-    def _merge_mapping_text(self, mapping: dict, mapping_text: str, source: str):
-        """将多行文本映射合并到 mapping。"""
-        if not isinstance(mapping_text, str):
-            return
-
-        for line in mapping_text.splitlines():
-            row = line.strip()
-            if not row or row.startswith("#"):
-                continue
-
-            if "=" in row:
-                vendor, target = row.split("=", 1)
-            elif ":" in row:
-                vendor, target = row.split(":", 1)
-            else:
-                logger.warning(f"忽略无效 {source} 配置行: {row}")
-                continue
-
-            vendor = vendor.strip()
-            target = target.strip()
-            if vendor and target:
-                mapping[vendor] = target
-
     def _get_vendor_mapping(self):
-        """读取供应商映射，兼容 object / 文本会话映射 / vendor:qq 映射。"""
+        """读取供应商映射，仅支持 ["user_number:vendor_id"] 格式。"""
         approval_cfg = self.config.get("approval_logic", {})
-        mapping = dict(approval_cfg.get("vendor_mapping", {}) or {})
+        vendor_mapping_raw = approval_cfg.get("vendor_mapping", "")
+        mapping = {}
 
-        # 通用文本版：供应商=会话ID 或 供应商:会话ID
-        self._merge_mapping_text(
-            mapping,
-            approval_cfg.get("vendor_mapping_text", ""),
-            "vendor_mapping_text",
-        )
+        if not isinstance(vendor_mapping_raw, str) or not vendor_mapping_raw.strip():
+            return mapping
 
-        # 专用简化版：供应商:QQ号（自动转为 QQ:<id>）
-        vendor_qq_mapping = approval_cfg.get("vendor_qq_mapping", "")
-        if isinstance(vendor_qq_mapping, str):
-            qq_mapping = {}
-            self._merge_mapping_text(qq_mapping, vendor_qq_mapping, "vendor_qq_mapping")
-            for vendor, qq in qq_mapping.items():
-                mapping[vendor] = f"QQ:{qq}"
+        try:
+            mapping_rows = json.loads(vendor_mapping_raw)
+        except Exception:
+            logger.warning("vendor_mapping 配置无效：必须为 JSON 数组，元素格式为 user_number:vendor_id。")
+            return mapping
+
+        if not isinstance(mapping_rows, list):
+            logger.warning("vendor_mapping 配置无效：必须为 JSON 数组。")
+            return mapping
+
+        for row in mapping_rows:
+            if not isinstance(row, str):
+                continue
+            item = row.strip()
+            if ":" not in item:
+                continue
+            user_number, vendor_id = item.split(":", 1)
+            user_number = user_number.strip()
+            vendor_id = vendor_id.strip()
+            if user_number and vendor_id:
+                mapping[vendor_id] = f"QQ:{user_number}"
 
         return mapping
 

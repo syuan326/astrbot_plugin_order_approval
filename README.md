@@ -61,22 +61,15 @@ markdown
 
 ### 3. 供应商映射配置
 
-如果你希望按你说的方式直接写 `<vendor>:<qq号>`，请使用 `approval_logic.vendor_qq_mapping`（推荐）：
+`approval_logic.vendor_mapping` 仅支持一种格式：`["user_number:vendor_id"]`。
 
-```text
-# 每行一条：供应商:QQ号
-Azure Interior:12345678
-Acme Corp:87654321
+```json
+[
+  "12345678:Azure Interior",
+  "87654321:Acme Corp"
+]
 ```
 
-插件会自动把它转换成 `QQ:<qq号>` 再发送。
-
-你仍然可以使用 `approval_logic.vendor_mapping_text`（通用格式）来写会话 ID：
-
-```text
-# 每行一条，支持 = 或 :
-Azure Interior=QQ:12345678
-Acme Corp:aiocqhttp:GroupMessage:987654321
-```
-
-优先级：`vendor_qq_mapping` > `vendor_mapping_text` > `vendor_mapping`。
+其中：
+- `user_number` 为审批人 QQ 号；
+- `vendor_id` 为 webhook 数据里的 `vendor` 字段值。
