@@ -69,7 +69,7 @@ class OrderApprovalPlugin(Star):
         return []
 
     def _get_vendor_mapping(self):
-        """读取供应商映射，仅支持 ["user_number:vendor_id"] 格式。"""
+        """读取供应商映射，支持三段式会话 ID 到供应商名称的映射。"""
         approval_cfg = self.config.get("approval_logic", {})
         vendor_mapping_raw = approval_cfg.get("vendor_mapping", "")
         mapping = {}
@@ -80,7 +80,10 @@ class OrderApprovalPlugin(Star):
         try:
             mapping_rows = json.loads(vendor_mapping_raw)
         except Exception:
-            logger.warning("vendor_mapping 配置无效：必须为 JSON 数组，元素格式为 user_number:vendor_id。")
+            logger.warning(
+                "vendor_mapping 配置无效：必须为 JSON 数组，元素格式示例："
+                "[{\"Pardofelis:FriendMessage:2331329306\": \"vendor_name\"}]。"
+            )
             return mapping
 
         if not isinstance(mapping_rows, list):
@@ -88,16 +91,27 @@ class OrderApprovalPlugin(Star):
             return mapping
 
         for row in mapping_rows:
-            if not isinstance(row, str):
+            # 新格式：{"Pardofelis:FriendMessage:2331329306": "vendor_name"}
+            if isinstance(row, dict):
+                for session_id, vendor_id in row.items():
+                    if not isinstance(session_id, str) or not isinstance(vendor_id, str):
+                        continue
+                    session_id = session_id.strip()
+                    vendor_id = vendor_id.strip()
+                    if session_id and vendor_id:
+                        mapping[vendor_id] = session_id
                 continue
-            item = row.strip()
-            if ":" not in item:
-                continue
-            user_number, vendor_id = item.split(":", 1)
-            user_number = user_number.strip()
-            vendor_id = vendor_id.strip()
-            if user_number and vendor_id:
-                mapping[vendor_id] = f"QQ:{user_number}"
+
+            # 兼容旧格式："12345678:vendor_name"
+            if isinstance(row, str):
+                item = row.strip()
+                if ":" not in item:
+                    continue
+                user_number, vendor_id = item.split(":", 1)
+                user_number = user_number.strip()
+                vendor_id = vendor_id.strip()
+                if user_number and vendor_id:
+                    mapping[vendor_id] = f"QQ:{user_number}"
 
         return mapping
 
